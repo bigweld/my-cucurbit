@@ -14,29 +14,40 @@ import random
 class myPhoto():
     def __init__(self,stored_path):
         self.domain = 'http://www.newsmth.net'
-        self.catalog_url = 'http://www.newsmth.net/nForum/board/MyPhoto?ajax&p=2'
-        self.keywords = ['nForum','article','MyPhoto','\d{7}']
+        self.catalog_url = 'http://www.newsmth.net/nForum/board/MyPhoto?ajax&p=1'
+        self.keywords = ['nForum','article','MyPhoto','\d{6,7}']
         self.stored_path = stored_path
     
-    def getDataFromUrl(self,url):
+    def getDataFromUrl(self,url,cached = True):
         """get data(file like object) from url """
         #cache_name = url.replace('/','|') + '.cache'
         print url
         cache_name = base64.b64encode(url) + '.cache'
-        if os.path.exists(cache_name):
-            print 'date is from cache：%s' %cache_name 
+        if cached:
+            if os.path.exists(cache_name):
+                print 'date is from cache：%s' %cache_name                 
+            else:
+                print 'data is from url'
+                try:
+                    res = urllib2.urlopen(url)
+                    with open(cache_name,'w') as f:
+                        f.write(res.read())
+                except Exception as e:
+                    print e
+                    return None
+            return open(cache_name)
         else:
             print 'data is from url'
+            if os.path.exists(cache_name):
+                os.remove(cache_name)                
             try:
                 res = urllib2.urlopen(url)
-                #print res
-                with open(cache_name,'w') as f:
-                    f.write(res.read())
+                return res
             except Exception as e:
                 print e
                 return None
-        return open(cache_name)
-
+            
+            
     def urlConcat(self,url1,url2):
         """concat two url as one with '/'"""
         return url1.rstrip('/') + '/' + url2.lstrip('/')
@@ -45,7 +56,7 @@ class myPhoto():
     def getUrlList(self):
         """get url list of each volume"""
         sub_urls = []
-        res = self.getDataFromUrl(self.catalog_url)
+        res = self.getDataFromUrl(self.catalog_url,False)
         if res:
             catalog = res.read()
             #re_str = r'<a.*?href="(/.*?' + self.keywords[0] + '.*html)".*?<\/a>'
@@ -65,7 +76,7 @@ class myPhoto():
         article_id = url.split('/')[-1]
         if res:
             catalog = res.read()
-            re_str = r'<a target="_blank" href="(' +img_domain +'/'+ article_id +'/\d{6})".*?<\/a>'
+            re_str = r'<a target="_blank" href="(' +img_domain +'/'+ article_id +'/\d{3,7})".*?<\/a>'
             print re_str
             sub_urls = re.findall(re_str,catalog,re.I)
             for i in sub_urls:
